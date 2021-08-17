@@ -1,25 +1,24 @@
-const express = require('express');
-const router = express.Router();
-const multer = require("multer");
+// роуты 
+const express = require('express')
+const router = express.Router()
+const multer = require('multer')
 const jimp = require('jimp')
-const path = require("path");
-const fs = require("fs/promises");
-require("dotenv").config();
-const User = require('../../model');
-const moment = require('moment');
-const { schemaSignupValidate } = require('../../utils/validate/schemas/Schema');
-
+const path = require('path')
+const fs = require('fs/promises')
+require('dotenv').config()
+const User = require('../../model')
+const moment = require('moment')
+const { schemaSignupValidate } = require('../../utils/validate/schemas/Schema')
 
 const uploadDir = `${process.cwd()}/avatars`
-
-const tempDir = path.join(process.cwd(), "tmp");
+const tempDir = path.join(process.cwd(), 'tmp')
 
 const storage = multer.diskStorage({
     destination: (req, file, cb)=>{
         cb(null, tempDir);
     },
     filename: (req, file, cb)=>{
-        cb(null, file.originalname);
+        cb(null, file.originalname)
     },
     limits: {
         fileSize: 1000000
@@ -27,9 +26,9 @@ const storage = multer.diskStorage({
 })
 const uploadMiddleware = multer({
     storage
-});
+})
 
-
+// поиск профиля по ИД
 router.get('/:userId', async (req, res, next) => {
     const id = req.params.userId;
     try {
@@ -57,18 +56,19 @@ router.get('/:userId', async (req, res, next) => {
         next(error)
     }
 })
-
+// реестрация нового профиля
 router.post('/signup', uploadMiddleware.single('avatar'), async (req, res, next) => {
     const { email, password, name, surname } = req.body
-    const { path: tempName, originalname } = req.file;
+    const { path: tempName, originalname } = req.file
     
-    const now = moment().format("YYYY-MM-DD_hh-mm-ss");
-    const fileName = `${now}_${originalname}`;
+    const now = moment().format("YYYY-MM-DD_hh-mm-ss")
+    const fileName = `${now}_${originalname}`
     const avatarURL = `${req.headers.host}/avatars/${fileName}`
-    const fullFileName = path.join(uploadDir, fileName);
+    const fullFileName = path.join(uploadDir, fileName)
     
     try {
-        const { error } = schemaSignupValidate.validate({ email, password,name,surname });
+        const { error } = schemaSignupValidate.validate({ email, password, name, surname } )
+       
         if (error) {
             return res.status(400).json({
                 Status: '400 Bad Request',
@@ -76,7 +76,7 @@ router.post('/signup', uploadMiddleware.single('avatar'), async (req, res, next)
                 ResponseBody: 'Ошибка от Joi или другой библиотеки валидации'
             })
         }
-        const result = await User.getOne({ email })
+        const result = await User.getOne({ email } )
         if (result) {
             return res.status(409).json({
                 Status: '409 conflict',
@@ -86,17 +86,17 @@ router.post('/signup', uploadMiddleware.single('avatar'), async (req, res, next)
                 }
             })
         }
-        await fs.rename(tempName, fullFileName);
+        await fs.rename(tempName, fullFileName)
         jimp.read(fullFileName)
             .then(img => {
                 return img.cover(200, 200, jimp.HORIZONTAL_ALIGN_CENTER | jimp.VERTICAL_ALIGN_MIDDLE)
                     .writeAsync(fullFileName)
             })
             .catch(error => {
-                console.log(error);
+                console.log(error)
             });
         
-        const newUser = await User.add({ email, password, name, surname, avatarURL: avatarURL });
+        const newUser = await User.add({ email, password, name, surname, avatarURL } )
 
         res.status(201).json({
             Status: '201 Created',
@@ -109,10 +109,8 @@ router.post('/signup', uploadMiddleware.single('avatar'), async (req, res, next)
         })
 
     } catch (error) {
-        await fs.unlink(tempName);
+        await fs.unlink(tempName)
     }
 })
 
-
-
-module.exports = router;
+module.exports = router

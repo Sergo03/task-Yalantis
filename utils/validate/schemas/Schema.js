@@ -1,4 +1,5 @@
-const Joi = require("joi");
+// валидация входящих данных
+const Joi = require('joi')
 
 const schemaSignupValidate = Joi.object({
     email: Joi.string().email().required(),
